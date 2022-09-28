@@ -24,11 +24,13 @@ class donkey_ekf:
 
 
 
-    def find_closest_feature(self, landmark_psi_exp_z, z):
+    def find_closest_feature(self, landmark_psi_exp_z_H_list, z):
         min_val = 999999
         min_index = 0
-        for i in range(len(landmark_psi_exp_z)):
-            val = np.transpose(z-landmark_psi_exp_z[i].expected_z)@np.linalg.inv(landmark_psi_exp_z[i].psi)@(z-landmark_psi_exp_z[i].expected_z)
+        for i in range(len(landmark_psi_exp_z_H_list)):
+            val = np.transpose(z-landmark_psi_exp_z_H_list[i].expected_z)\
+                @np.linalg.inv(landmark_psi_exp_z_H_list[i].psi)\
+                @(z-landmark_psi_exp_z_H_list[i].expected_z)
             if val < min_val:
                 min_val = val
                 min_index = i
@@ -49,7 +51,7 @@ class donkey_ekf:
         return miu_bar, sigma_bar
 
     def expect_measure(self, land_mark_list, miu_bar, sigma_bar, Qt):
-        landmark_psi_exp_z_H = [] # covariance and expected measurement of each landmark
+        landmark_psi_exp_z_H_list = [] # covariance and expected measurement of each landmark
         #  calculate measurement's covariance and expected measurement from map
         for elem in land_mark_list:
             landmark_x = elem[0]
@@ -61,18 +63,18 @@ class donkey_ekf:
                                   [delta_k[1], delta_k[0], -1]])
             psi_k = H@sigma_bar@np.transpose(H) + Qt
             land = calculated_landmark(psi_k, expected_z, H)
-            landmark_psi_exp_z_H.append(land)
-        return landmark_psi_exp_z_H
+            landmark_psi_exp_z_H_list.append(land)
+        return landmark_psi_exp_z_H_list
 
-    def calculate_karman_gain(self, z_list, landmark_psi_exp_z, sigma_bar):
+    def calculate_karman_gain(self, z_list, landmark_psi_exp_z_H_list, sigma_bar):
         # find the  measurement to corresponding landmark from map
         karman_gain_list = []
         measure_to_landmark_dic = {}
         for i in range(len(z_list)):
             z = z_list[i]
-            index = self.find_closest_feature(landmark_psi_exp_z, z)
-            H = landmark_psi_exp_z[index].H
-            K = sigma_bar@H@np.linalg.inv(landmark_psi_exp_z[index].psi)
+            index = self.find_closest_feature(landmark_psi_exp_z_H_list, z)
+            H = landmark_psi_exp_z_H_list[index].H
+            K = sigma_bar@np.transpose(H)@np.linalg.inv(landmark_psi_exp_z_H_list[index].psi)
             measure_to_landmark_dic[i] = index
             karman_gain_list.append(K)
         return karman_gain_list, measure_to_landmark_dic
