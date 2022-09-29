@@ -94,6 +94,38 @@ class TestEKFMethods(unittest.TestCase):
                   np.array([[0.5, 0], [0, 2], [0, 0.2]])]
         for i in range(len(karman_gain_list)):
             self.assert_matrix(karman_gain_list[i], k_test[i])
+    
+    def test_measurement_update(self):
+        ekf = donkey_ekf()
+        karman_gain_list = [np.array([[0.5, 0],
+                                      [0, 2],
+                                      [0, 0.2]]),
+                            np.array([[1, 0],
+                                      [0, 2],
+                                      [0, 0.2]])]
+        measure_to_landmark_dic = {0:1, 1:0}
+        z_list = [np.array([9, 0]),
+                  np.array([4.5, 1])]
+        sigma_bar = np.array([[1, 0, 0],
+                              [0, 1, 0],
+                              [0, 0, 0.1]])
+        miu_bar = np.array([1, 1, 0.5])
+        H = np.array([[1, 0, 0],
+                      [0, 1, 1]])
+        expected_z = np.array([4, 1.5]) # 0.5*4+2*0.5^2 = 2.5
+        psi = np.array([[2, 0],[0, 0.5]])
+        expected_z_2 = np.array([10, 1])
+        psi_2 = np.array([[1, 0],[0, 0.5]]) # 4.5 std
+        landmk1 = calculated_landmark(psi, expected_z, None)
+        landmk2 = calculated_landmark(psi_2, expected_z_2, None)          
+        landmark_psi_exp_z = [landmk1, landmk2]
+        miu, sigma = ekf.measurement_update(karman_gain_list, measure_to_landmark_dic, miu_bar, sigma_bar, z_list, H, landmark_psi_exp_z)
+        miu_test = np.array([1, -2, 0.2])
+        sigma_test = np.array([[-0.5, 0, 0],
+                               [0, -3, -0.4],
+                               [0, -0.4, 0.06]])
+        self.assert_matrix(miu_test, miu, 3)
+        self.assert_matrix(sigma_test, sigma, 3)
 
 
 if __name__ == '__main__':

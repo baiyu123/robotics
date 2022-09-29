@@ -80,16 +80,15 @@ class donkey_ekf:
         return karman_gain_list, measure_to_landmark_dic
 
     def measurement_update(self, karman_gain_list, measure_to_landmark_dic, miu_bar, sigma_bar, z_list, H, landmark_psi_exp_z):
-        miu_sum = np.array([[0],
-                            [0],
-                            [0]])
+        miu_sum = np.array([0, 0, 0], dtype=float)
         sigma_sum = np.array([[0,0,0],
-                              [0,0,0]])
+                              [0,0,0],
+                              [0,0,0]], dtype=float)
         for z_index, index in measure_to_landmark_dic.items():
-            miu_sum += karman_gain_list[z_index]*(z_list[z_index]-landmark_psi_exp_z[index].expected_z)
-            sigma_sum += karman_gain_list[z_index]*H
+            miu_sum += karman_gain_list[z_index]@(z_list[z_index]-landmark_psi_exp_z[index].expected_z)
+            sigma_sum += karman_gain_list[z_index]@H
         miu = miu_bar + miu_sum
-        sigma = (np.identity - sigma_sum)@sigma_bar
+        sigma = (np.identity(3) - sigma_sum)@sigma_bar
         return miu, sigma
 
     def ekf_step(self, miu, sigma, delta, v, z_list, land_mark_list):
